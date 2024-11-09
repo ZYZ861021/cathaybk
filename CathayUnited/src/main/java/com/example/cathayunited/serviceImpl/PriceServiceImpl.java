@@ -74,18 +74,22 @@ public class PriceServiceImpl implements PriceService {
 
     @Override
     public PriceChangeCalculatorVo priceChangeCalculator(String startDate, String endDate) {
-        long dateStart = changeDateUtil.stringChangeLong(startDate);
-        long dateEnd = changeDateUtil.stringChangeLong(endDate);
+        // 前收
+        long closingPriceBeforeStart = changeDateUtil.getStartOfDayTimestamp(startDate);
+        long closingPriceBeforeEnd = changeDateUtil.getEndOfDayTimestamp(startDate);
+        // 後收
+        long closingPriceAfterStart = changeDateUtil.getStartOfDayTimestamp(endDate);
+        long closingPriceAfterEnd = changeDateUtil.getEndOfDayTimestamp(endDate);
 
-        Price startPrice = priceRepository.findFirstByDate(dateStart);
-        Price endPrice = priceRepository.findFirstByDate(dateEnd);
+        List<Price> startPrice = priceRepository.findClosingPriceByDate(closingPriceBeforeStart, closingPriceBeforeEnd);
+        List<Price> endPrice = priceRepository.findClosingPriceByDate(closingPriceAfterStart, closingPriceAfterEnd);
 
         if (startPrice == null || endPrice == null) {
             throw new IllegalArgumentException("Price data not found for the given dates");
         }
 
-        BigDecimal priceDifference = endPrice.getPrice().subtract(startPrice.getPrice());
-        BigDecimal rateOfChange = priceDifference.divide(startPrice.getPrice(), 2, RoundingMode.HALF_UP);
+        BigDecimal priceDifference = endPrice.get(0).getPrice().subtract(startPrice.get(0).getPrice());
+        BigDecimal rateOfChange = priceDifference.divide(startPrice.get(0).getPrice(), 2, RoundingMode.HALF_UP);
 
         return new PriceChangeCalculatorVo(priceDifference, rateOfChange);
     }
